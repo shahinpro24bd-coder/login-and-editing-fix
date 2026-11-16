@@ -54,6 +54,13 @@
     ".cms-vitem span{flex:1;font-size:12px;color:#555;word-break:break-all}",
     ".cms-vdel{background:#dc2646;color:#fff;border:0;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px}",
     ".cms-vempty{font-size:13px;color:#888;margin-bottom:12px}",
+    /* quick YouTube post box (gallery edit copy only) */
+    ".cms-vpost{box-sizing:border-box;width:calc(100% - 32px);max-width:760px;margin:0 auto 32px;display:flex;gap:10px;align-items:center;padding:14px;background:#fff;border:2px dashed var(--bs-primary,#BF9456);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.06);font-family:'Hind Siliguri',system-ui,sans-serif}",
+    ".cms-vpost input{flex:1;min-width:0;padding:12px 14px;border:1px solid #e4d8c4;border-radius:10px;font-size:15px;color:#111;background:#fff;outline:none}",
+    ".cms-vpost input:focus{border-color:var(--bs-primary,#BF9456);box-shadow:0 0 0 3px rgba(191,148,86,.18)}",
+    ".cms-vpost-btn{background:var(--bs-primary,#BF9456);color:#fff;border:0;border-radius:10px;padding:12px 22px;font-size:15px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}",
+    ".cms-vpost-btn:disabled{opacity:.6;cursor:wait}",
+    "@media (max-width:600px){.cms-vpost{flex-direction:column;align-items:stretch}.cms-vpost-btn{width:100%}}",
 
   ].join("\n");
   document.head.appendChild(css);
@@ -188,7 +195,7 @@
       "click",
       function (e) {
         if (!authed) return;
-        if (e.target.closest(".cms-bar,.cms-modal,.cms-btn-login,.cms-toast,.cms-panel"))
+        if (e.target.closest(".cms-bar,.cms-modal,.cms-btn-login,.cms-toast,.cms-panel,.cms-vpost"))
           return;
 
 
@@ -712,6 +719,81 @@
       if (ev.target === wrap) wrap.remove();
     });
   }
+
+  /* ---------- quick YouTube post box (gallery edit copy only) ----------
+     Paste a YouTube link and press "post": the video is saved straight to
+     the database, so it appears on the public gallery page at once. */
+  function whenContentLoaded(fn) {
+    if (window.CMS_LOADED) return fn();
+    document.addEventListener("cms:loaded", function once() {
+      document.removeEventListener("cms:loaded", once);
+      fn();
+    });
+  }
+
+  function initVideoPostBox() {
+    var box = document.querySelector("[data-cms-videos]");
+    if (!box || document.getElementById("cms-vpost")) return;
+    var form = document.createElement("form");
+    form.id = "cms-vpost";
+    form.className = "cms-vpost";
+    form.innerHTML =
+      '<input id="cms-vpost-url" type="text" inputmode="url" autocomplete="off" placeholder="YouTube \u09ad\u09bf\u09a1\u09bf\u0993\u09b0 \u09b2\u09bf\u0982\u0995 \u098f\u0996\u09be\u09a8\u09c7 \u09a6\u09bf\u09a8" aria-label="YouTube \u09ad\u09bf\u09a1\u09bf\u0993\u09b0 \u09b2\u09bf\u0982\u0995">' +
+      '<button type="submit" class="cms-vpost-btn">\u09aa\u09cb\u09b8\u09cd\u099f \u0995\u09b0\u09c1\u09a8</button>';
+    box.parentNode.insertBefore(form, box);
+    var input = form.querySelector("input");
+    var btn = form.querySelector("button");
+
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      if (btn.disabled) return;
+      var id = ytId(input.value);
+      if (!id) return toast("\u09b8\u09a0\u09bf\u0995 YouTube \u09b2\u09bf\u0982\u0995 \u09a6\u09bf\u09a8");
+      if (!authed) {
+        toast("\u0986\u0997\u09c7 \u09b2\u0997\u0987\u09a8 \u0995\u09b0\u09c1\u09a8");
+        return openLogin();
+      }
+      btn.disabled = true;
+      btn.textContent = "\u09aa\u09cb\u09b8\u09cd\u099f \u09b9\u099a\u09cd\u099b\u09c7...";
+      whenContentLoaded(function () {
+        var ids = readVideos(box);
+        if (ids.indexOf(id) >= 0) {
+          btn.disabled = false;
+          btn.textContent = "\u09aa\u09cb\u09b8\u09cd\u099f \u0995\u09b0\u09c1\u09a8";
+          return toast("\u098f\u0987 \u09ad\u09bf\u09a1\u09bf\u0993\u099f\u09bf \u0986\u0997\u09c7\u0987 \u0986\u099b\u09c7");
+        }
+        ids.unshift(id); /* newest post first */
+        var html = videosHtml(ids);
+        var cmsId = idFor(box);
+        fetch("/api/public/cms/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ page: page, items: [{ cms_id: cmsId, kind: "text", value: html }] }),
+        })
+          .then(function (r) {
+            return r.json().then(function (d) {
+              return { ok: r.ok, d: d };
+            });
+          })
+          .then(function (res) {
+            if (!res.ok) return toast("\u09aa\u09cb\u09b8\u09cd\u099f \u09b9\u09df\u09a8\u09bf: " + ((res.d && res.d.error) || ""));
+            box.innerHTML = html;
+            delete changes[cmsId + "::text"];
+            updateBar();
+            input.value = "";
+            toast("\u09ad\u09bf\u09a1\u09bf\u0993 \u09aa\u09cb\u09b8\u09cd\u099f \u09b9\u09df\u09c7\u099b\u09c7 \u2713 \u09ae\u09c2\u09b2 \u0997\u09cd\u09af\u09be\u09b2\u09be\u09b0\u09bf\u09a4\u09c7\u0993 \u09a6\u09c7\u0996\u09be \u09af\u09be\u099a\u09cd\u099b\u09c7");
+          })
+          .catch(function () {
+            toast("\u09b8\u09be\u09b0\u09cd\u09ad\u09be\u09b0\u09c7\u09b0 \u09b8\u09be\u09a5\u09c7 \u09b8\u0982\u09af\u09cb\u0997 \u09b9\u099a\u09cd\u099b\u09c7 \u09a8\u09be");
+          })
+          .then(function () {
+            btn.disabled = false;
+            btn.textContent = "\u09aa\u09cb\u09b8\u09cd\u099f \u0995\u09b0\u09c1\u09a8";
+          });
+      });
+    });
+  }
+  initVideoPostBox();
 
   /* ---------- save bar ---------- */
   var bar;
