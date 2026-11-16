@@ -133,8 +133,25 @@
   var settingsDone = settingsP.then(function (items) {
     if (!items) return;
     var s = toSettings(items);
-    applySettings(s);
+    /* A colour/font this browser remembered but the website no longer has
+       cannot be undone in place, so reload once with the real settings.
+       Every browser then shows exactly the saved (or original) colours. */
+    var stale =
+      cachedSettings &&
+      ((cachedSettings.color && cachedSettings.color !== s.color) ||
+        (cachedSettings.font && cachedSettings.font !== s.font));
     save(SETTINGS_KEY, s);
+    if (stale && !s.color && !s.font) {
+      var once = "cms-settings-reset";
+      try {
+        if (!sessionStorage.getItem(once)) {
+          sessionStorage.setItem(once, "1");
+          location.reload();
+          return new Promise(function () {});
+        }
+      } catch (e) {}
+    }
+    applySettings(s);
     document.dispatchEvent(new CustomEvent("cms:settings", { detail: s }));
   });
 
