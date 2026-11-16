@@ -5,7 +5,8 @@
 - [x] Verify website media, loaded icon fonts, and favicon across all 22 public and editor pages; browser errors absent.
 - [x] Remove edit-copy navigation from main pages and open the public home by default.
 - [x] Require server-verified admin login on every *2.html editor copy.
-- [x] Verify public pages, incorrect login, correct login, Settings changes, and logout.- [x] Make admin login work on Vercel without host keys (database-verified login).
+- [x] Verify public pages, incorrect login, correct login, Settings changes, and logout.
+- [x] Make admin login work on Vercel without host keys (database-verified login).
 - [x] Save editor changes live so every visitor sees them on the public pages.
-- [ ] Real admin login/save test with admin / admin123 — blocked: website database is down (won't start after several restarts).
+- [x] Fix *2.html login/edit: moved to this project's own database with the editor tables created; wrong password, login, edit, save and public view verified.
 - [ ] Make wrong-password lockout per visitor instead of shared — blocked: needs the database running.

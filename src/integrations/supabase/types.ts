@@ -54,14 +54,17 @@ export type Database = {
         Row: {
           created_at: string
           id: number
+          visitor: string
         }
         Insert: {
           created_at?: string
           id?: never
+          visitor?: string
         }
         Update: {
           created_at?: string
           id?: never
+          visitor?: string
         }
         Relationships: []
       }

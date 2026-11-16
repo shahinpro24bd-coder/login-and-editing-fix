@@ -8,6 +8,13 @@
       "when": 1794837571371,
       "tag": "0000_cms_live_editor",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794837974772,
+      "tag": "0001_cms_login_lockout_per_visitor",
+      "breakpoints": true
     }
   ]
 }

@@ -28,3 +28,12 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- Render the uploaded legacy website inside an isolated iframe at the index route to preserve its original CSS, scripts, and appearance without replacing TanStack Start.
+- The legacy CMS adapter (public/website/preview-session.js) maps /api/public/cms/* calls to Lovable Cloud REST/RPC with the publishable key, so static hosts like Vercel need no server code or env keys.
+- Verify editor credentials and session tokens only inside SECURITY DEFINER database functions; credential and session tables stay without client grants, and only cms_content is publicly readable.
+- Open the public home by default and keep public navigation separate from the authenticated *2.html editor copies.
+- Host original uploaded media using asset-pointer URLs and keep editable legacy HTML/CSS/JS in public/website for the preview.
+- Preserve asset-pointer URLs on Vercel with an external rewrite to this project's preview origin; Vercel does not serve the platform asset path itself.
+- Derive the root favicon from the original website brand mark and remove the template favicon so browser tabs and direct favicon requests never use template branding.
+- The CMS schema (cms_* tables and SECURITY DEFINER functions) lives in this project's Lovable Cloud; preview-session.js must point at this project's backend URL and publishable key, never another project's.
