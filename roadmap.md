@@ -9,4 +9,4 @@
 - [x] Make admin login work on Vercel without host keys (database-verified login).
 - [x] Save editor changes live so every visitor sees them on the public pages.
 - [x] Fix *2.html login/edit: moved to this project's own database with the editor tables created; wrong password, login, edit, save and public view verified.
-- [ ] Make wrong-password lockout per visitor instead of shared — blocked: needs the database running.
+- [x] Make wrong-password lockout per visitor (20 tries / 15 min per visitor, 500 overall) so one person cannot lock the admin out.
