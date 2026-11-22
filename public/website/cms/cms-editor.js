@@ -54,6 +54,11 @@
     ".cms-vitem span{flex:1;font-size:12px;color:#555;word-break:break-all}",
     ".cms-vdel{background:#dc2646;color:#fff;border:0;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px}",
     ".cms-vempty{font-size:13px;color:#888;margin-bottom:12px}",
+    /* page switcher inside Settings */
+    ".cms-pages{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px}",
+    ".cms-pagebtn{display:block;width:100%;text-align:left;background:#f3f4f6;color:#111;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;font-family:system-ui,'Hind Siliguri',sans-serif;line-height:1.3}",
+    ".cms-pagebtn:hover{background:#e5e7eb}",
+    ".cms-pagebtn.sel{background:#111827;color:#fff;border-color:#111827;cursor:default}",
     /* quick YouTube post box (gallery edit copy only) */
     ".cms-vpost{box-sizing:border-box;width:calc(100% - 32px);max-width:760px;margin:0 auto 32px;display:flex;gap:10px;align-items:center;padding:14px;background:#fff;border:2px dashed var(--bs-primary,#BF9456);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.06);font-family:'Hind Siliguri',system-ui,sans-serif}",
     ".cms-vpost input{flex:1;min-width:0;padding:12px 14px;border:1px solid #e4d8c4;border-radius:10px;font-size:15px;color:#111;background:#fff;outline:none}",
@@ -534,6 +539,41 @@
     if (window.CMS_THEME) window.CMS_THEME.applyTheme(c);
   }
 
+  /* ---------- page switcher (Settings): jump to any editor page ---------- */
+  var EDIT_PAGES = [
+    ["index", "\u09b9\u09cb\u09ae"],
+    ["about", "\u09aa\u09b0\u09bf\u099a\u09df"],
+    ["service", "\u09b8\u09c7\u09ac\u09be\u09b8\u09ae\u09c2\u09b9"],
+    ["gallery", "\u0997\u09cd\u09af\u09be\u09b2\u09be\u09b0\u09bf"],
+    ["contact", "\u09af\u09cb\u0997\u09be\u09af\u09cb\u0997"],
+    ["service-general", "\u099c\u09c7\u09a8\u09be\u09b0\u09c7\u09b2 \u09b8\u09be\u09b0\u09cd\u099c\u09be\u09b0\u09bf"],
+    ["service-laparoscopic", "\u09b2\u09cd\u09af\u09be\u09aa\u09be\u09b0\u09cb\u09b8\u09cd\u0995\u09cb\u09aa\u09bf\u0995 \u09b8\u09be\u09b0\u09cd\u099c\u09be\u09b0\u09bf"],
+    ["service-colorectal", "\u0995\u09cb\u09b2\u09cb\u09b0\u09c7\u0995\u09cd\u099f\u09be\u09b2 \u09b8\u09be\u09b0\u09cd\u099c\u09be\u09b0\u09bf"],
+    ["service-breast", "\u09ac\u09cd\u09b0\u09c7\u09b8\u09cd\u099f \u09b8\u09be\u09b0\u09cd\u099c\u09be\u09b0\u09bf"],
+    ["service-cancer", "\u0995\u09cd\u09af\u09be\u09a8\u09cd\u09b8\u09be\u09b0 \u09b8\u09be\u09b0\u09cd\u099c\u09be\u09b0\u09bf"],
+    ["service-endoscopy", "\u098f\u09a8\u09cd\u09a1\u09cb\u09b8\u09cd\u0995\u09cb\u09aa\u09bf"],
+  ];
+
+  function renderPages(list) {
+    if (!list) return;
+    EDIT_PAGES.forEach(function (p) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "cms-pagebtn" + (p[0] === page ? " sel" : "");
+      b.textContent = p[1];
+      if (p[0] === page) {
+        b.setAttribute("aria-current", "page");
+      } else {
+        b.onclick = function () {
+          var pending = Object.keys(changes).length + Object.keys(settings).length;
+          if (pending && !window.confirm("\u09b8\u09c7\u09ad \u09a8\u09be \u0995\u09b0\u09be " + pending + "\u099f\u09bf \u09aa\u09b0\u09bf\u09ac\u09b0\u09cd\u09a4\u09a8 \u09b9\u09be\u09b0\u09bf\u09df\u09c7 \u09af\u09be\u09ac\u09c7\u0964 \u09a4\u09ac\u09c1\u0993 \u09af\u09be\u09ac\u09c7\u09a8?")) return;
+          location.href = p[0] + "2.html";
+        };
+      }
+      list.appendChild(b);
+    });
+  }
+
   function toggleSettings() {
     if (panel) {
       panel.remove();
@@ -544,6 +584,8 @@
     panel = document.createElement("div");
     panel.className = "cms-panel";
     panel.innerHTML =
+      '<h4>\u09aa\u09c7\u099c\u09c7 \u09af\u09be\u09a8</h4>' +
+      '<div class="cms-pages" id="cms-page-list"></div>' +
       '<h4>ফন্ট</h4>' +
       '<input type="search" id="cms-font-search" placeholder="ফন্ট খুঁজুন" aria-label="ফন্ট খুঁজুন">' +
       '<div class="cms-fontlist" id="cms-font-list"></div>' +
@@ -552,6 +594,7 @@
       '<label for="cms-custom-color">কাস্টম কালার</label> ' +
       '<input type="color" id="cms-custom-color" aria-label="কাস্টম কালার">';
     document.body.appendChild(panel);
+    renderPages(panel.querySelector("#cms-page-list"));
 
     var fonts = window.CMS_FONTS || ["Hind Siliguri", "Noto Sans Bengali", "Roboto"];
     var colors = window.CMS_COLORS || ["#bf9456", "#2980b9", "#27ae60", "#dc2646"];
