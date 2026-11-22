@@ -505,7 +505,10 @@
           })
           .then(function (d) {
             if (!d.url) return toast("\u0986\u09aa\u09b2\u09cb\u09a1 \u09ac\u09cd\u09af\u09b0\u09cd\u09a5: " + (d.error || ""));
-            if (kind === "image") el.setAttribute("src", d.url);
+            if (kind === "image") {
+              el.setAttribute("src", d.url);
+              el.setAttribute("data-cms-replaced", "1");
+            }
             else el.style.backgroundImage = "url('" + d.url + "')";
             record(el, kind, d.url);
             toast("\u099b\u09ac\u09bf \u09af\u09c1\u0995\u09cd\u09a4 \u09b9\u09df\u09c7\u099b\u09c7");

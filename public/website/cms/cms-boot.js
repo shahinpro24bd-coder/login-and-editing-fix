@@ -13,6 +13,17 @@
   var SETTINGS_KEY = "cms-settings";
   var TIMEOUT_MS = 1500;
 
+  /* A picture replaced from the editor is shown whole (never cropped):
+     its frame takes the new picture's own shape instead of the fixed one. */
+  var fit = document.createElement("style");
+  fit.id = "cms-full-image-style";
+  fit.textContent =
+    "img[data-cms-replaced]{height:auto !important;min-height:0 !important;max-height:none !important;" +
+    "aspect-ratio:auto !important;object-fit:contain !important;object-position:center !important}" +
+    ".hero32:has(> img[data-cms-replaced]),.service-detail-portrait:has(> img[data-cms-replaced])" +
+    "{aspect-ratio:auto !important;height:auto !important}";
+  (document.head || document.documentElement).appendChild(fit);
+
   function get(key) {
     try {
       return localStorage.getItem(key);

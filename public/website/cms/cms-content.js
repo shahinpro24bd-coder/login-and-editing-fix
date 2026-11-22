@@ -51,7 +51,10 @@
       var el = jobs[k].el;
       var item = jobs[k].it;
       try {
-        if (item.kind === "image") el.setAttribute("src", item.value);
+        if (item.kind === "image") {
+          el.setAttribute("src", item.value);
+          el.setAttribute("data-cms-replaced", "1");
+        }
         else if (item.kind === "placeholder") el.setAttribute("placeholder", item.value);
         else if (item.kind === "bg") el.style.backgroundImage = "url('" + item.value + "')";
         else if (item.kind === "fontsize") el.style.fontSize = item.value;
