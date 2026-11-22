@@ -66,6 +66,11 @@
     ".cms-vpost-btn{background:var(--bs-primary,#BF9456);color:#fff;border:0;border-radius:10px;padding:12px 22px;font-size:15px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}",
     ".cms-vpost-btn:disabled{opacity:.6;cursor:wait}",
     "@media (max-width:600px){.cms-vpost{flex-direction:column;align-items:stretch}.cms-vpost-btn{width:100%}}",
+    /* per-video delete button (gallery edit copy only) */
+    ".cms-on [data-cms-videos] .video-card{position:relative}",
+    ".cms-vx{position:absolute;top:8px;right:8px;z-index:5;background:#dc2626;color:#fff;border:0;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.25);font-family:'Hind Siliguri',system-ui,sans-serif;line-height:1.2}",
+    ".cms-vx:hover{background:#b91c1c}",
+    ".cms-vx:disabled{opacity:.6;cursor:wait}",
 
   ].join("\n");
   document.head.appendChild(css);
@@ -200,7 +205,7 @@
       "click",
       function (e) {
         if (!authed) return;
-        if (e.target.closest(".cms-bar,.cms-modal,.cms-btn-login,.cms-toast,.cms-panel,.cms-vpost"))
+        if (e.target.closest(".cms-bar,.cms-modal,.cms-btn-login,.cms-toast,.cms-panel,.cms-vpost,.cms-vx"))
           return;
 
 
@@ -841,6 +846,69 @@
   }
   initVideoPostBox();
 
+  /* ---------- per-video delete button (gallery edit copy only) ----------
+     Each video gets a delete button while logged in; deleting saves straight
+     to the database, so the video disappears from the public gallery too. */
+  var videoBox = document.querySelector("[data-cms-videos]");
+  function decorateVideos() {
+    if (!videoBox || !authed) return;
+    Array.prototype.forEach.call(videoBox.querySelectorAll(".video-card"), function (card) {
+      if (card.querySelector(".cms-vx")) return;
+      var f = card.querySelector("iframe");
+      var id = f && ytId(f.getAttribute("src") || "");
+      if (!id) return;
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "cms-vx";
+      del.textContent = "\u2715 \u09ae\u09c1\u099b\u09c1\u09a8";
+      del.setAttribute("aria-label", "\u098f\u0987 \u09ad\u09bf\u09a1\u09bf\u0993\u099f\u09bf \u09ae\u09c1\u099b\u09c1\u09a8");
+      del.onclick = function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        deleteVideo(id, del);
+      };
+      card.appendChild(del);
+    });
+  }
+  function deleteVideo(id, btn) {
+    if (!authed) return openLogin();
+    if (!window.confirm("\u098f\u0987 \u09ad\u09bf\u09a1\u09bf\u0993\u099f\u09bf \u09ae\u09c1\u099b\u09c7 \u09ab\u09c7\u09b2\u09ac\u09c7\u09a8? \u09ae\u09c2\u09b2 \u0997\u09cd\u09af\u09be\u09b2\u09be\u09b0\u09bf \u09a5\u09c7\u0995\u09c7\u0993 \u09b8\u09b0\u09c7 \u09af\u09be\u09ac\u09c7\u0964")) return;
+    btn.disabled = true;
+    whenContentLoaded(function () {
+      var ids = readVideos(videoBox).filter(function (v) {
+        return v !== id;
+      });
+      var html = videosHtml(ids);
+      var cmsId = idFor(videoBox);
+      fetch("/api/public/cms/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page: page, items: [{ cms_id: cmsId, kind: "text", value: html }] }),
+      })
+        .then(function (r) {
+          return r.json().then(function (d) {
+            return { ok: r.ok, d: d };
+          });
+        })
+        .then(function (res) {
+          if (!res.ok) {
+            btn.disabled = false;
+            return toast("\u09ae\u09c1\u099b\u09be \u09af\u09be\u09af\u09bc\u09a8\u09bf: " + ((res.d && res.d.error) || ""));
+          }
+          videoBox.innerHTML = html;
+          delete changes[cmsId + "::text"];
+          updateBar();
+          toast("\u09ad\u09bf\u09a1\u09bf\u0993 \u09ae\u09c1\u099b\u09c7 \u09ab\u09c7\u09b2\u09be \u09b9\u09af\u09bc\u09c7\u099b\u09c7 \u2713 \u09ae\u09c2\u09b2 \u0997\u09cd\u09af\u09be\u09b2\u09be\u09b0\u09bf \u09a5\u09c7\u0995\u09c7\u0993 \u09b8\u09b0\u09c7 \u0997\u09c7\u099b\u09c7");
+        })
+        .catch(function () {
+          btn.disabled = false;
+          toast("\u09b8\u09be\u09b0\u09cd\u09ad\u09be\u09b0\u09c7\u09b0 \u09b8\u09be\u09a5\u09c7 \u09b8\u0982\u09af\u09cb\u0997 \u09b9\u099a\u09cd\u099b\u09c7 \u09a8\u09be");
+        });
+    });
+  }
+  if (videoBox && window.MutationObserver)
+    new MutationObserver(decorateVideos).observe(videoBox, { childList: true });
+
   /* ---------- save bar ---------- */
   var bar;
   function updateBar() {
@@ -876,6 +944,7 @@
     };
     bindClickEditing();
     bindFontDrag();
+    decorateVideos();
 
     toast("\u098f\u09a1\u09bf\u099f \u09ae\u09cb\u09a1 \u099a\u09be\u09b2\u09c1");
   }
