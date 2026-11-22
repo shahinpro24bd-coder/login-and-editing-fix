@@ -50,6 +50,36 @@ export type Database = {
         }
         Relationships: []
       }
+      cms_content_history: {
+        Row: {
+          action: string
+          changed_at: string
+          cms_id: string
+          id: number
+          new_item: Json | null
+          old_item: Json | null
+          page: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          cms_id: string
+          id?: never
+          new_item?: Json | null
+          old_item?: Json | null
+          page: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          cms_id?: string
+          id?: never
+          new_item?: Json | null
+          old_item?: Json | null
+          page?: string
+        }
+        Relationships: []
+      }
       cms_login_attempts: {
         Row: {
           created_at: string
@@ -99,6 +129,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cms_change_password: {
+        Args: { p_new: string; p_old: string; p_token: string }
+        Returns: boolean
+      }
       cms_check: { Args: { p_token: string }; Returns: boolean }
       cms_login: {
         Args: { p_password: string; p_username: string }

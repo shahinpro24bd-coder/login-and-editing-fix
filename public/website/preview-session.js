@@ -116,6 +116,26 @@
         return json({ ok: true, saved: saved.d });
       }
 
+      if (path === "password" && method === "POST") {
+        var pt = getToken();
+        if (!pt || !isEditor()) return json({ error: "লগইন করুন" }, 401);
+        var pw = bodyOf(options);
+        var changed = await rpc("cms_change_password", {
+          p_token: pt, p_old: String(pw.old || ""), p_new: String(pw.next || ""),
+        });
+        if (!changed.ok) {
+          var pwWhy = String((changed.d && (changed.d.message || changed.d.error)) || "");
+          if (/not authenticated/i.test(pwWhy)) {
+            setToken(null);
+            return json({ error: "লগইনের মেয়াদ শেষ, আবার লগইন করুন" }, 401);
+          }
+          if (/weak password/i.test(pwWhy)) return json({ error: "নতুন পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের দিন" }, 400);
+          return json({ error: "সার্ভারের সাথে সংযোগ হচ্ছে না, কিছুক্ষণ পরে আবার চেষ্টা করুন" }, 503);
+        }
+        if (changed.d !== true) return json({ error: "বর্তমান পাসওয়ার্ড ভুল" }, 401);
+        return json({ ok: true });
+      }
+
       if (path === "upload" && method === "POST") {
         if (!(await checkSession())) return json({ error: "লগইন করুন" }, 401);
         var up = bodyOf(options);

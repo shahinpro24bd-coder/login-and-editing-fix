@@ -37,3 +37,6 @@ use the editor.
 - Preserve asset-pointer URLs on Vercel with an external rewrite to this project's preview origin; Vercel does not serve the platform asset path itself.
 - Derive the root favicon from the original website brand mark and remove the template favicon so browser tabs and direct favicon requests never use template branding.
 - The CMS schema (cms_* tables and SECURITY DEFINER functions) lives in this project's Lovable Cloud; preview-session.js must point at this project's backend URL and publishable key, never another project's.
+- Saved website content (cms_content) changes only through the logged-in editor (cms_save); never write, seed, reset or delete its rows from code, migrations or tools, and never renumber or remove existing data-cms-id attributes, because saved rows are matched to elements by those ids.
+- The editor refuses to edit or save until the page's saved content has loaded successfully (CMS_LOAD_OK), so a page showing built-in or cached text can never overwrite real data.
+- Every cms_content insert/update/delete is copied by a trigger into the private cms_content_history table (service_role only), which is the restore source if content is ever lost.

@@ -15,6 +15,13 @@
       "when": 1794837974772,
       "tag": "0001_cms_login_lockout_per_visitor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795365561734,
+      "tag": "0002_cms_history_and_password_change",
+      "breakpoints": true
     }
   ]
 }

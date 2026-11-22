@@ -70,6 +70,7 @@
     ".cms-on [data-cms-videos] .video-card{position:relative}",
     ".cms-vx{position:absolute;top:8px;right:8px;z-index:5;background:#dc2626;color:#fff;border:0;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.25);font-family:'Hind Siliguri',system-ui,sans-serif;line-height:1.2}",
     ".cms-vx:hover{background:#b91c1c}",
+    ".cms-pw input{display:block;width:100%;box-sizing:border-box;margin-bottom:8px;padding:9px 10px;border:1px solid #d4d4d4;border-radius:8px;font-size:14px;color:#111;background:#fff}",
     ".cms-vx:disabled{opacity:.6;cursor:wait}",
 
   ].join("\n");
@@ -192,6 +193,21 @@
     return "body>" + parts.join(">");
   }
 
+  /* Editing and saving are allowed only after this page's saved content has
+     been loaded from the database. Otherwise the page may still show the
+     built-in (old) text and saving would overwrite the real data. */
+  function contentReady() {
+    if (!window.CMS_LOADED) {
+      toast("\u09b8\u09c7\u09ad \u0995\u09b0\u09be \u09a4\u09a5\u09cd\u09af \u09b2\u09cb\u09a1 \u09b9\u099a\u09cd\u099b\u09c7, \u098f\u0995 \u09ae\u09c1\u09b9\u09c2\u09b0\u09cd\u09a4 \u0985\u09aa\u09c7\u0995\u09cd\u09b7\u09be \u0995\u09b0\u09c1\u09a8");
+      return false;
+    }
+    if (window.CMS_LOAD_OK === false) {
+      toast("\u09b8\u09c7\u09ad \u0995\u09b0\u09be \u09a4\u09a5\u09cd\u09af \u09b2\u09cb\u09a1 \u09b9\u09af\u09bc\u09a8\u09bf\u0964 \u09ad\u09c1\u09b2 \u0995\u09b0\u09c7 \u09aa\u09c1\u09b0\u09a8\u09cb \u09a4\u09a5\u09cd\u09af \u09b8\u09c7\u09ad \u09a8\u09be \u09b9\u09af\u09bc \u09a4\u09be\u0987 \u098f\u09a1\u09bf\u099f \u09ac\u09a8\u09cd\u09a7 \u0986\u099b\u09c7 \u2014 \u09aa\u09c7\u099c\u099f\u09bf \u09b0\u09bf\u09b2\u09cb\u09a1 \u0995\u09b0\u09c1\u09a8");
+      return false;
+    }
+    return true;
+  }
+
   function idFor(el) {
     return el.getAttribute("data-cms-id") || "path:" + pathFor(el);
   }
@@ -214,6 +230,12 @@
         /* already typing inside this element: let the browser handle the
            click normally (caret placement, text selection, etc.) */
         if (e.target.closest("[data-cms-editing]")) return;
+
+        if (e.target.closest("[data-cms-id],[data-cms-videos]") && !contentReady()) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
 
         /* video grid: open the YouTube manager instead of text editing */
         var vbox = e.target.closest("[data-cms-videos]");
@@ -582,6 +604,43 @@
     });
   }
 
+  function bindPasswordForm(form) {
+    if (!form) return;
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var btn = form.querySelector("button");
+      if (btn.disabled) return;
+      var oldPw = form.querySelector("#cms-pw-old").value;
+      var newPw = form.querySelector("#cms-pw-new").value;
+      var newPw2 = form.querySelector("#cms-pw-new2").value;
+      if (!oldPw || !newPw) return toast("\u09b8\u09ac\u0997\u09c1\u09b2\u09cb \u0998\u09b0 \u09aa\u09c2\u09b0\u09a3 \u0995\u09b0\u09c1\u09a8");
+      if (newPw.length < 8) return toast("\u09a8\u09a4\u09c1\u09a8 \u09aa\u09be\u09b8\u0993\u09af\u09bc\u09be\u09b0\u09cd\u09a1 \u0995\u09ae\u09aa\u0995\u09cd\u09b7\u09c7 \u09ee \u0985\u0995\u09cd\u09b7\u09b0\u09c7\u09b0 \u09a6\u09bf\u09a8");
+      if (newPw !== newPw2) return toast("\u09a8\u09a4\u09c1\u09a8 \u09aa\u09be\u09b8\u0993\u09af\u09bc\u09be\u09b0\u09cd\u09a1 \u09a6\u09c1\u0987\u09ac\u09be\u09b0 \u098f\u0995\u0987 \u09b2\u09bf\u0996\u09c1\u09a8");
+      btn.disabled = true;
+      fetch("/api/public/cms/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ old: oldPw, next: newPw }),
+      })
+        .then(function (r) {
+          return r.json().then(function (d) {
+            return { ok: r.ok, d: d };
+          });
+        })
+        .then(function (res) {
+          if (!res.ok) return toast((res.d && res.d.error) || "\u09aa\u09be\u09b8\u0993\u09af\u09bc\u09be\u09b0\u09cd\u09a1 \u09ac\u09a6\u09b2\u09be\u09a8\u09cb \u09af\u09be\u09af\u09bc\u09a8\u09bf");
+          form.reset();
+          toast("\u09aa\u09be\u09b8\u0993\u09af\u09bc\u09be\u09b0\u09cd\u09a1 \u09ac\u09a6\u09b2\u09be\u09a8\u09cb \u09b9\u09af\u09bc\u09c7\u099b\u09c7 \u2713 \u0985\u09a8\u09cd\u09af \u09b8\u09ac \u09a1\u09bf\u09ad\u09be\u0987\u09b8 \u09a5\u09c7\u0995\u09c7 \u09b2\u0997 \u0986\u0989\u099f \u0995\u09b0\u09be \u09b9\u09af\u09bc\u09c7\u099b\u09c7");
+        })
+        .catch(function () {
+          toast("\u09b8\u09be\u09b0\u09cd\u09ad\u09be\u09b0\u09c7\u09b0 \u09b8\u09be\u09a5\u09c7 \u09b8\u0982\u09af\u09cb\u0997 \u09b9\u099a\u09cd\u099b\u09c7 \u09a8\u09be");
+        })
+        .then(function () {
+          btn.disabled = false;
+        });
+    });
+  }
+
   function toggleSettings() {
     if (panel) {
       panel.remove();
@@ -600,8 +659,16 @@
       '<h4>থিম কালার</h4>' +
       '<div class="cms-swatches" id="cms-color-list"></div>' +
       '<label for="cms-custom-color">কাস্টম কালার</label> ' +
-      '<input type="color" id="cms-custom-color" aria-label="কাস্টম কালার">';
+      '<input type="color" id="cms-custom-color" aria-label="কাস্টম কালার">' +
+      '<h4 style="margin-top:16px">\u09aa\u09be\u09b8\u0993\u09af\u09bc\u09be\u09b0\u09cd\u09a1 \u09ac\u09a6\u09b2\u09be\u09a8</h4>' +
+      '<form id="cms-pw-form" class="cms-pw">' +
+      '<input type="password" id="cms-pw-old" autocomplete="current-password" placeholder="\u09ac\u09b0\u09cd\u09a4\u09ae\u09be\u09a8 \u09aa\u09be\u09b8\u0993\u09af\u09bc\u09be\u09b0\u09cd\u09a1" aria-label="\u09ac\u09b0\u09cd\u09a4\u09ae\u09be\u09a8 \u09aa\u09be\u09b8\u0993\u09af\u09bc\u09be\u09b0\u09cd\u09a1">' +
+      '<input type="password" id="cms-pw-new" autocomplete="new-password" placeholder="\u09a8\u09a4\u09c1\u09a8 \u09aa\u09be\u09b8\u0993\u09af\u09bc\u09be\u09b0\u09cd\u09a1 (\u0995\u09ae\u09aa\u0995\u09cd\u09b7\u09c7 \u09ee \u0985\u0995\u09cd\u09b7\u09b0)" aria-label="\u09a8\u09a4\u09c1\u09a8 \u09aa\u09be\u09b8\u0993\u09af\u09bc\u09be\u09b0\u09cd\u09a1 (\u0995\u09ae\u09aa\u0995\u09cd\u09b7\u09c7 \u09ee \u0985\u0995\u09cd\u09b7\u09b0)">' +
+      '<input type="password" id="cms-pw-new2" autocomplete="new-password" placeholder="\u09a8\u09a4\u09c1\u09a8 \u09aa\u09be\u09b8\u0993\u09af\u09bc\u09be\u09b0\u09cd\u09a1 \u0986\u09ac\u09be\u09b0 \u09b2\u09bf\u0996\u09c1\u09a8" aria-label="\u09a8\u09a4\u09c1\u09a8 \u09aa\u09be\u09b8\u0993\u09af\u09bc\u09be\u09b0\u09cd\u09a1 \u0986\u09ac\u09be\u09b0 \u09b2\u09bf\u0996\u09c1\u09a8">' +
+      '<button type="submit" class="cms-btn cms-btn-save" style="width:100%">\u09aa\u09be\u09b8\u0993\u09af\u09bc\u09be\u09b0\u09cd\u09a1 \u09ac\u09a6\u09b2\u09be\u09a8</button>' +
+      '</form>';
     document.body.appendChild(panel);
+    bindPasswordForm(panel.querySelector("#cms-pw-form"));
     renderPages(panel.querySelector("#cms-page-list"));
 
     var fonts = window.CMS_FONTS || ["Hind Siliguri", "Noto Sans Bengali", "Roboto"];
@@ -807,6 +874,11 @@
       btn.disabled = true;
       btn.textContent = "\u09aa\u09cb\u09b8\u09cd\u099f \u09b9\u099a\u09cd\u099b\u09c7...";
       whenContentLoaded(function () {
+        if (!contentReady()) {
+          btn.disabled = false;
+          btn.textContent = "\u09aa\u09cb\u09b8\u09cd\u099f \u0995\u09b0\u09c1\u09a8";
+          return;
+        }
         var ids = readVideos(box);
         if (ids.indexOf(id) >= 0) {
           btn.disabled = false;
@@ -875,6 +947,10 @@
     if (!window.confirm("\u098f\u0987 \u09ad\u09bf\u09a1\u09bf\u0993\u099f\u09bf \u09ae\u09c1\u099b\u09c7 \u09ab\u09c7\u09b2\u09ac\u09c7\u09a8? \u09ae\u09c2\u09b2 \u0997\u09cd\u09af\u09be\u09b2\u09be\u09b0\u09bf \u09a5\u09c7\u0995\u09c7\u0993 \u09b8\u09b0\u09c7 \u09af\u09be\u09ac\u09c7\u0964")) return;
     btn.disabled = true;
     whenContentLoaded(function () {
+      if (!contentReady()) {
+        btn.disabled = false;
+        return;
+      }
       var ids = readVideos(videoBox).filter(function (v) {
         return v !== id;
       });
@@ -950,6 +1026,7 @@
   }
 
   function save() {
+    if (!contentReady()) return;
     var items = Object.keys(changes).map(function (k) {
       return changes[k];
     });

@@ -163,6 +163,9 @@
       apply(items);
       save(CACHE_KEY, items);
     }
+    /* false = the database could not be reached; the editor then refuses to
+       save so a page showing old/built-in text can never overwrite real data */
+    window.CMS_LOAD_OK = !!items;
     window.CMS_LOADED = true;
     document.dispatchEvent(new CustomEvent("cms:loaded", { detail: items || [] }));
   });
