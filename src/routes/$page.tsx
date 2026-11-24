@@ -16,7 +16,7 @@ export const Route = createFileRoute('/$page')({
   head: ({ params }) => {
     const key = params.page.replace(/2?\.html$/, '');
     const title = `${names[key] || 'পৃষ্ঠা'}${params.page.endsWith('2.html') ? ' — এডিটর' : ''} — ডাঃ এম এ বি সিদ্দিক`;
-    const description = `${names[key] || 'ওয়েবসাইট'} — অধ্যাপক ডাঃ এম এ বি সিদ্দিক।`;
+    const description = `${names[key] || 'ওয়েবসাইট'} — সহযোগী অধ্যাপক ডাঃ এম এ বি সিদ্দিক।`;
     return { meta: [
       { title }, { name: 'description', content: description },
       { property: 'og:title', content: title }, { property: 'og:description', content: description },

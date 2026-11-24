@@ -3,7 +3,7 @@ export function WebsitePreview({ page = 'index.html' }: { page?: string }) {
     <iframe
       className="website-preview"
       src={`/website/${page}`}
-      title="অধ্যাপক ডাঃ এম এ বি সিদ্দিক — Settings preview"
+      title="সহযোগী অধ্যাপক ডাঃ এম এ বি সিদ্দিক — Settings preview"
     />
   );
 }
