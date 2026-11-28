@@ -60,7 +60,7 @@
         var page = url.searchParams.get("page") || "index";
         var r = await originalFetch(
           API + "/cms_content?select=item&page=eq." + encodeURIComponent(page),
-          { headers: headers(), cache: "no-store" }
+          { headers: headers(), cache: "no-store", signal: options && options.signal }
         );
         if (!r.ok) return json({ error: "unavailable" }, 503);
         var rows = await r.json();
@@ -100,6 +100,7 @@
       if (path === "save" && method === "POST") {
         var token = getToken();
         if (!token || !isEditor()) return json({ error: "লগইন করুন" }, 401);
+        if (window.CMS_LOAD_OK !== true) return json({ error: "সংরক্ষিত তথ্য লোড হয়নি, সেভ বন্ধ আছে। পেজটি রিলোড করুন।" }, 409);
         var payload = bodyOf(options);
         var saved = await rpc("cms_save", {
           p_token: token, p_page: payload.page, p_items: payload.items || [],

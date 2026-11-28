@@ -1,17 +1,15 @@
 /* CMS content loader — applies saved content to the static page.
    Loaded on every page (live and edit copy).
 
-   No flash of stale content:
-   - the requests are started in <head> by cms-boot.js,
-   - a device with a local cache paints the cached content immediately,
-   - a device with no cache is held back by cms-boot.js until the fresh
-     content, font and colour from the database have been applied. */
+   Only a successful read of BOTH saved content and settings is displayed.
+   Browser caches and built-in text never replace an unavailable saved version. */
 (function () {
   var page = window.CMS_PAGE || "index";
   var CACHE_KEY = "cms-cache:" + page;
   var SETTINGS_KEY = "cms-settings";
   var boot = window.__CMS_BOOT;
-  var gate = window.__CMS_GATE || { release: function () {} };
+  var gate = window.__CMS_GATE || { release: function () {}, fail: function () {} };
+  window.CMS_LOAD_OK = false;
 
   function depth(el) {
     var d = 0;
@@ -93,22 +91,7 @@
     } catch (e) {}
   }
 
-  function read(key) {
-    try {
-      var raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /* 1) instant paint from cache (returning devices only) */
-  var cached = read(CACHE_KEY);
-  if (cached) apply(cached);
-  var cachedSettings = read(SETTINGS_KEY);
-  if (cachedSettings) applySettings(cachedSettings);
-
-  /* 2) fresh copy from the database (started in <head> by cms-boot.js) */
+  /* Fresh copy from the database (started in <head> by cms-boot.js). */
   function fetchFresh(url) {
     return fetch(url + "&t=" + Date.now(), {
       cache: "no-store",
@@ -133,52 +116,31 @@
   var settingsP =
     (boot && boot.settings) || fetchFresh("/api/public/cms/content?page=site-settings");
 
-  var settingsDone = settingsP.then(function (items) {
-    if (!items) return;
-    var s = toSettings(items);
-    /* A colour/font this browser remembered but the website no longer has
-       cannot be undone in place, so reload once with the real settings.
-       Every browser then shows exactly the saved (or original) colours. */
-    var stale =
-      cachedSettings &&
-      ((cachedSettings.color && cachedSettings.color !== s.color) ||
-        (cachedSettings.font && cachedSettings.font !== s.font));
-    save(SETTINGS_KEY, s);
-    if (stale && !s.color && !s.font) {
-      var once = "cms-settings-reset";
-      try {
-        if (!sessionStorage.getItem(once)) {
-          sessionStorage.setItem(once, "1");
-          location.reload();
-          return new Promise(function () {});
-        }
-      } catch (e) {}
-    }
-    applySettings(s);
-    document.dispatchEvent(new CustomEvent("cms:settings", { detail: s }));
-  });
-
-  var contentDone = contentP.then(function (items) {
-    if (items) {
-      apply(items);
-      save(CACHE_KEY, items);
-    }
-    /* false = the database could not be reached; the editor then refuses to
-       save so a page showing old/built-in text can never overwrite real data */
-    window.CMS_LOAD_OK = !!items;
-    window.CMS_LOADED = true;
-    document.dispatchEvent(new CustomEvent("cms:loaded", { detail: items || [] }));
-  });
-
-  /* 3) reveal the page once the saved version is on screen */
-  Promise.all([contentDone, settingsDone])
-    .then(function () {
+  Promise.all([contentP, settingsP])
+    .then(function (results) {
+      var items = results[0];
+      var settingItems = results[1];
+      var ok = Array.isArray(items) && Array.isArray(settingItems);
+      if (ok) {
+        var s = toSettings(settingItems);
+        apply(items);
+        applySettings(s);
+        save(CACHE_KEY, items);
+        save(SETTINGS_KEY, s);
+        document.dispatchEvent(new CustomEvent("cms:settings", { detail: s }));
+      }
+      window.CMS_LOAD_OK = ok;
+      window.CMS_LOADED = true;
+      document.dispatchEvent(new CustomEvent("cms:loaded", { detail: ok ? items : [] }));
+      if (!ok) { gate.fail(); return; }
       // one frame so the applied styles/text are painted together
       requestAnimationFrame(function () {
         requestAnimationFrame(gate.release);
       });
     })
     .catch(function () {
-      gate.release();
+      window.CMS_LOAD_OK = false;
+      window.CMS_LOADED = true;
+      gate.fail();
     });
 })();

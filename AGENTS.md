@@ -39,4 +39,5 @@ use the editor.
 - The CMS schema (cms_* tables and SECURITY DEFINER functions) lives in this project's Lovable Cloud; preview-session.js must point at this project's backend URL and publishable key, never another project's.
 - Saved website content (cms_content) changes only through the logged-in editor (cms_save); never write, seed, reset or delete its rows from code, migrations or tools, and never renumber or remove existing data-cms-id attributes, because saved rows are matched to elements by those ids.
 - The editor refuses to edit or save until the page's saved content has loaded successfully (CMS_LOAD_OK), so a page showing built-in or cached text can never overwrite real data.
+- Reveal legacy pages only after both saved content and site settings load successfully; on failure show a retry notice and block saves in both editor and adapter, so hosting/network outages cannot display or persist fallback information.
 - Every cms_content insert/update/delete is copied by a trigger into the private cms_content_history table (service_role only), which is the restore source if content is ever lost.
